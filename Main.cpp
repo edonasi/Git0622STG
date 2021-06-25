@@ -48,6 +48,7 @@ struct AUDIO
 	int playType = -1;
 };
 
+
 //シーンを管理する変数
 //現在のゲームのシーン
 GAME_SCENE GameScene;
