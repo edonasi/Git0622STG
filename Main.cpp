@@ -92,11 +92,22 @@ int titleLogoCnt = 0;
 const int titleLogoCntMax = 120;
 bool isTitleEnterBrink = false;
 
+//弾の画像のハンドル
+const int SHOT_X_MAX = 4;
+const int SHOT_Y_MAX = 6; 
+const int SHOT_ARRAY_MAX = SHOT_X_MAX * SHOT_Y_MAX;
+int shot[SHOT_ARRAY_MAX];
+int shotIndex = 0;
+int shotRoteCnt = 0;
+int shotRoteCntMax = 30;
+
+
 //ゲーム全体の初期化
 bool GameLoad();
 //画像の読み込み
 bool CharacterLoad(CHARACTER* chara, const char* path);
 bool ImageLoad(IMAGE* chara, const char* path);
+bool ImageLoadDivMem(int* handle, const char* path, int arrayMax, int divX, int divY);
 //音楽読み込み
 bool AudioLoad(AUDIO* audio, const char* path, int playType, int volume);
 //
@@ -259,6 +270,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		ScreenFlip();
 	}
 
+	//読み込んだ画像を解放
+	for (int i = 0; i < SHOT_ARRAY_MAX; i++) 
+	{
+		DeleteGraph(shot[i]);
+	}
+
 	// ＤＸライブラリ使用の終了処理準備(return 0でソフトが終了する)
 	DxLib_End();				
 
@@ -275,6 +292,14 @@ const int BGM_LOOP = DX_PLAYTYPE_LOOP;
 /// <returns>読み込めたらtrue, 読み込めなかったらfalse</returns>
 bool GameLoad() 
 {
+	const char* shotImagePath = ".\\Images\\shot_small_cylinder_ori.png";
+
+	if (ImageLoadDivMem(&shot[0], shotImagePath, SHOT_ARRAY_MAX, SHOT_X_MAX, SHOT_Y_MAX)
+		==false)
+	{
+		return false;
+	}
+	
 
 	return true;
 }
@@ -325,6 +350,68 @@ bool ImageLoad(IMAGE* chara, const char* path)
 
 	//画像の幅と高さを取得
 	GetGraphSize(chara->handle, &chara->width, &chara->height);
+
+	return true;
+}
+
+/// <summary>
+/// 画像を分割してメモリに読み込み
+/// </summary>
+/// <param name="handle">ハンドル配列の先頭アドレス</param>
+/// <param name="path">画像のパス</param>
+/// <param name="divX">分割する時の横の数</param>
+/// <param name="divY">分割する時の縦の数</param>
+/// <returns></returns>
+bool ImageLoadDivMem(int* handle, const char* path,int arrayMax, int divX, int divY) 
+{
+	//弾分割画像を読み込む
+	int isShotLoad = -1;	//画像を読み込めたか
+
+	//分割画像の大きさ取得用
+	int shotImageHandle = LoadGraph(path);
+
+	//画像の読み込みエラー判定
+	if (shotImageHandle == -1)
+	{
+		MessageBox(
+			GetMainWindowHandle(),	//ウィンドウハンドル
+			path,			//本文
+			"弾画像読み込みエラー",	//タイトル
+			MB_OK					//ボタン
+		);
+
+		return false;	//読み込み失敗
+	}
+
+	//画像の幅と高さを取得
+	int shotWidth = -1;
+	int shotHeight = -1;
+	GetGraphSize(shotImageHandle, &shotWidth, &shotHeight);
+
+	isShotLoad = LoadDivGraph(
+		path,	//画像のパス
+		arrayMax,				//分割総数
+		divX, divY,	//横縦の分割
+		shotWidth / divX, shotHeight / divY,
+		handle
+	);
+
+
+
+	if (isShotLoad == -1)
+	{
+		MessageBox(
+			GetMainWindowHandle(),	//ウィンドウハンドル
+			path,			//本文
+			"弾分割画像読み込みエラー",	//タイトル
+			MB_OK					//ボタン
+		);
+
+		return false;
+	}
+
+	//弾の画像の大きさの役割は以上なので削除
+	DeleteGraph(shotImageHandle);
 
 	return true;
 }
@@ -407,35 +494,29 @@ void TitleProc()
 //描画
 void TitleDraw() 
 {
-	if (GAME_DEBUG)
-	{
-		const char* string = "Title";
-		DrawString(0, 50, string, GetColor(0, 0, 0));
-	}
-	//※レイヤー概念は下に書いた処理がゲーム画面では上のレイヤーに表示される(photoshopやillustratorと逆)
+	//弾の描画
+	DrawGraph(0, 0, shot[shotIndex], true);
 
-	//タイトルロゴを上下に動かす
-	if (isTitleEnterBrink) 
+	if (shotRoteCnt<shotRoteCntMax) 
 	{
-		titleLogoCnt -= 4;
-
-		if (titleLogoCnt < 0) 
-		{
-			isTitleEnterBrink = false; 
-			titleLogoCnt = 0;
-		}
+		shotRoteCnt++;
 	}
 	else 
 	{
-		titleLogoCnt++;
+		shotRoteCnt = 0;
 
-		if (titleLogoCnt > titleLogoCntMax) 
-		{ 
-			isTitleEnterBrink = true; 
-			titleLogoCnt = titleLogoCntMax;
+		//弾の添え字が弾の分割数の最大よりも小さいとき
+		if (shotIndex < SHOT_X_MAX-1)
+		{
+			shotIndex++;
+		}
+		else
+		{
+			shotIndex = 0;
 		}
 	}
 
+	
 
 	return;
 }
