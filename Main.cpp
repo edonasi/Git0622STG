@@ -3,6 +3,15 @@
 #include "Keyboard.h"	//キーボードの処理のヘッダファイル
 #define _CRT_SECURE_NO_WARNINGS
 
+struct IMAGE_COM
+{
+	int x;				//xの位置
+	int y;				//yの位置
+	int width;			//画像の幅
+	int height;			//画像の高さ
+	bool isDraw = false;//画像が描画できるか
+};
+
 //当たり判定のない画像の構造体
 struct IMAGE
 {
@@ -48,6 +57,28 @@ struct AUDIO
 	int playType = -1;
 };
 
+const int SHOT_ARRAY_MAX = 4;	//弾配列の最大数
+//弾の構造体
+struct SHOT
+{
+	int handle[SHOT_ARRAY_MAX];	//画像のハンドル
+	char path[255];				//画像のパス
+
+	int divX;	//分割数(横)
+	int divY;	//分割数(縦)
+	int divMax;	//分割総数
+
+	int animeCnt = 0;		//アニメーションカウンター
+	int animeCntMax = 0;	//アニメーションカウンター最大値
+
+	int nowIndex = 0;		//現在の画像の要素数
+
+	int speed;
+
+	IMAGE_COM imageCom;		//画像の共通項目
+
+	RECT coll;
+};
 
 //シーンを管理する変数
 //現在のゲームのシーン
@@ -92,15 +123,19 @@ int titleLogoCnt = 0;
 const int titleLogoCntMax = 120;
 bool isTitleEnterBrink = false;
 
-//弾の画像のハンドル
-const int SHOT_X_MAX = 4;
-const int SHOT_Y_MAX = 6; 
-const int SHOT_ARRAY_MAX = SHOT_X_MAX * SHOT_Y_MAX;
-int shot[SHOT_ARRAY_MAX];
-int shotIndex = 0;
-int shotRoteCnt = 0;
-int shotRoteCntMax = 30;
+//弾の構造体
+struct SHOT shotMoto;	//元
+const int SHOT_MAX = 10;		//弾排出最大数
+struct SHOT shotUse[SHOT_MAX];	//実際に使う
 
+//爆発画像のハンドル
+const int EXPROSION_X_MAX = 8;
+const int EXPROSION_Y_MAX = 2;
+const int EXPROSION_ARRAY_MAX = EXPROSION_X_MAX * EXPROSION_Y_MAX;
+int exprosion[EXPROSION_ARRAY_MAX];
+int exprosionIndex = 0;
+int exprosionCnt = 0;
+int exprosionCntMax = 4;
 
 //ゲーム全体の初期化
 bool GameLoad();
@@ -122,6 +157,8 @@ void Title();
 void TitleProc();
 //タイトル画面 描画
 void TitleDraw();
+//弾の描画
+void DrawShot(SHOT* shot);
 //プレイ画面
 void Play();
 //プレイ画面 処理
@@ -143,6 +180,7 @@ void ChangeProc();
 void ChangeDraw();
 //当たり判定の領域を更新
 void CollUpdate(CHARACTER* chara);
+void CollUpdate(SHOT* shot);
 void CollUpdate(CHARACTER* chara, int addLeft, int addTop, int addRight, int addBottom);
 //当たり判定(Enter)
 bool CollStay(CHARACTER chara1, CHARACTER chara2);
@@ -273,7 +311,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	//読み込んだ画像を解放
 	for (int i = 0; i < SHOT_ARRAY_MAX; i++) 
 	{
-		DeleteGraph(shot[i]);
+		DeleteGraph(shotMoto.handle[i]);
 	}
 
 	// ＤＸライブラリ使用の終了処理準備(return 0でソフトが終了する)
@@ -292,14 +330,49 @@ const int BGM_LOOP = DX_PLAYTYPE_LOOP;
 /// <returns>読み込めたらtrue, 読み込めなかったらfalse</returns>
 bool GameLoad() 
 {
-	const char* shotImagePath = ".\\Images\\shot_small_cylinder_ori.png";
+	//弾の分割数を設定
+	shotMoto.divX = 4;
+	shotMoto.divY = 1;
 
-	if (ImageLoadDivMem(&shot[0], shotImagePath, SHOT_ARRAY_MAX, SHOT_X_MAX, SHOT_Y_MAX)
+	//弾画像の読み込み
+	strcpyDx(shotMoto.path, ".\\Images\\Image\\dia_pink.png");
+
+	if (ImageLoadDivMem(&shotMoto.handle[0], shotMoto.path, shotMoto.divX*shotMoto.divY, shotMoto.divX, shotMoto.divY)
 		==false)
 	{
 		return false;
 	}
+
+	//位置の設定
+	shotMoto.imageCom.x = GAME_WIDTH / 2 - shotMoto.imageCom.width/2;	//中央揃え
+	shotMoto.imageCom.y = GAME_HEIGHT - shotMoto.imageCom.height;	//画面下
 	
+	//速度
+	shotMoto.speed = 10;
+
+	//アニメーションを変えるスピード
+	shotMoto.animeCntMax = 30;
+
+	//当たり判定の更新
+	CollUpdate(&shotMoto);
+
+	//画像を表示しない
+	shotMoto.imageCom.isDraw = false;
+
+	//すべての球に情報をコピー
+	for (int i = 0; i < SHOT_MAX; i++) 
+	{
+		shotUse[i] = shotMoto;
+	}
+
+	//爆発画像の読み込み
+	const char* exprosionPath = ".\\Images\\Image\\baku1.png";
+	if (ImageLoadDivMem(&exprosion[0], exprosionPath,
+		EXPROSION_ARRAY_MAX, EXPROSION_X_MAX, EXPROSION_Y_MAX)
+		== false) 
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -474,7 +547,7 @@ void Title()
 //処理
 void TitleProc() 
 {
-	
+	DrawShot(&shotMoto);
 
 	//ゲーム画面に切り替わる
 	if (KeyClick(KEY_INPUT_RETURN)) 
@@ -494,31 +567,60 @@ void TitleProc()
 //描画
 void TitleDraw() 
 {
-	//弾の描画
-	DrawGraph(0, 0, shot[shotIndex], true);
+	
 
-	if (shotRoteCnt<shotRoteCntMax) 
+	//爆発の描画
+	DrawGraph(100, 100, exprosion[exprosionIndex], true);
+
+	if (exprosionCnt < exprosionCntMax)
 	{
-		shotRoteCnt++;
+		exprosionCnt++;
 	}
 	else 
 	{
-		shotRoteCnt = 0;
+		exprosionCnt = 0;
 
-		//弾の添え字が弾の分割数の最大よりも小さいとき
-		if (shotIndex < SHOT_X_MAX-1)
+		if (exprosionIndex < EXPROSION_ARRAY_MAX - 1) 
 		{
-			shotIndex++;
+			exprosionIndex++;
 		}
-		else
+		else 
 		{
-			shotIndex = 0;
+			exprosionIndex = 0;
 		}
 	}
-
 	
 
 	return;
+}
+
+/// <summary>
+/// 弾の描画
+/// </summary>
+/// <param name="shot">弾の構造体</param>
+void DrawShot(SHOT* shot) 
+{
+	//弾の描画
+	DrawGraph(0, 0, shot->handle[shot->nowIndex], true);
+
+	if (shot->animeCnt < shot->animeCntMax)
+	{
+		shot->animeCnt++;
+	}
+	else
+	{
+		shot->animeCnt = 0;
+
+		//弾の添え字が弾の分割数の最大よりも小さいとき
+		if (shot->nowIndex < SHOT_ARRAY_MAX - 1)
+		{
+			shot->nowIndex++;
+		}
+		else
+		{
+			shot->nowIndex = 0;
+		}
+	}
 }
 
 //プレイ画面
@@ -713,6 +815,20 @@ void CollUpdate(CHARACTER* chara)
 	chara->coll.top = chara->img.y;
 	chara->coll.right = chara->img.x + chara->img.width;
 	chara->coll.bottom = chara->img.y + chara->img.height;
+
+	return;
+}
+
+/// <summary>
+/// 当たり判定の領域更新
+/// </summary>
+/// <param name="imageCom.coll"></param>
+void CollUpdate(SHOT* shot)
+{
+	shot->coll.left = shot->imageCom.x;
+	shot->coll.top = shot->imageCom.y;
+	shot->coll.right = shot->imageCom.x + shot->imageCom.width;
+	shot->coll.bottom = shot->imageCom.y + shot->imageCom.height;
 
 	return;
 }
