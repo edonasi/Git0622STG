@@ -128,6 +128,10 @@ struct SHOT shotMoto;	//元
 const int SHOT_MAX = 10;		//弾排出最大数
 struct SHOT shotUse[SHOT_MAX];	//実際に使う
 
+//弾の発射カウンタ
+int shotIntervalCnt = 0;
+int shotIntervalCntMax = 30;
+
 //爆発画像のハンドル
 const int EXPROSION_X_MAX = 8;
 const int EXPROSION_Y_MAX = 2;
@@ -343,12 +347,15 @@ bool GameLoad()
 		return false;
 	}
 
+	//幅と高さを取得
+	GetGraphSize(shotMoto.handle[0], &shotMoto.imageCom.width, &shotMoto.imageCom.height);
+
 	//位置の設定
 	shotMoto.imageCom.x = GAME_WIDTH / 2 - shotMoto.imageCom.width/2;	//中央揃え
 	shotMoto.imageCom.y = GAME_HEIGHT - shotMoto.imageCom.height;	//画面下
 	
 	//速度
-	shotMoto.speed = 10;
+	shotMoto.speed = 5;
 
 	//アニメーションを変えるスピード
 	shotMoto.animeCntMax = 30;
@@ -547,7 +554,8 @@ void Title()
 //処理
 void TitleProc() 
 {
-	DrawShot(&shotMoto);
+	//スペースが押されたときに球を発射する
+	
 
 	//ゲーム画面に切り替わる
 	if (KeyClick(KEY_INPUT_RETURN)) 
@@ -600,25 +608,28 @@ void TitleDraw()
 /// <param name="shot">弾の構造体</param>
 void DrawShot(SHOT* shot) 
 {
-	//弾の描画
-	DrawGraph(0, 0, shot->handle[shot->nowIndex], true);
-
-	if (shot->animeCnt < shot->animeCntMax)
+	if (shot->imageCom.isDraw) 
 	{
-		shot->animeCnt++;
-	}
-	else
-	{
-		shot->animeCnt = 0;
+		//弾の描画
+		DrawGraph(shot->imageCom.x, shot->imageCom.y, shot->handle[shot->nowIndex], true);
 
-		//弾の添え字が弾の分割数の最大よりも小さいとき
-		if (shot->nowIndex < SHOT_ARRAY_MAX - 1)
+		if (shot->animeCnt < shot->animeCntMax)
 		{
-			shot->nowIndex++;
+			shot->animeCnt++;
 		}
 		else
 		{
-			shot->nowIndex = 0;
+			shot->animeCnt = 0;
+
+			//弾の添え字が弾の分割数の最大よりも小さいとき
+			if (shot->nowIndex < SHOT_ARRAY_MAX - 1)
+			{
+				shot->nowIndex++;
+			}
+			else
+			{
+				shot->nowIndex = 0;
+			}
 		}
 	}
 }
@@ -637,6 +648,55 @@ void Play()
 //処理
 void PlayProc() 
 {
+	if (KeyDown(KEY_INPUT_SPACE)&& shotIntervalCnt == 0)
+	{
+		//弾を発射する
+		for (int i = 0; i < SHOT_MAX; i++)
+		{
+			if (shotUse[i].imageCom.isDraw == false)
+			{
+				shotUse[i].imageCom.isDraw = true;
+
+				shotUse[i].imageCom.x = GAME_WIDTH / 2 - shotUse[i].imageCom.width / 2;
+				shotUse[i].imageCom.y = GAME_HEIGHT / 2 - shotUse[i].imageCom.height / 2;
+
+				//弾の当たり判定を更新
+				CollUpdate(&shotUse[i]);
+
+				shotIntervalCnt++;
+
+				break;
+			}
+		}
+	}
+
+	//弾の発射待ち
+	if (shotIntervalCnt != 0 && shotIntervalCnt < shotIntervalCntMax)
+	{
+		shotIntervalCnt++;
+	}
+	else
+	{
+		shotIntervalCnt = 0;
+	}
+
+	//弾を飛ばす
+	for (int i = 0; i < SHOT_MAX; i++)
+	{
+		if (shotUse[i].imageCom.isDraw == true)
+		{
+			shotUse[i].imageCom.y -= shotUse->speed;
+
+			//画面外に出たら描画しない
+			if (shotUse[i].imageCom.y + shotUse[i].imageCom.height<0
+				|| shotUse[i].imageCom.y>GAME_HEIGHT
+				|| shotUse[i].imageCom.x + shotUse[i].imageCom.width<0
+				|| shotUse[i].imageCom.x>GAME_WIDTH)
+			{
+				shotUse[i].imageCom.isDraw = false;
+			}
+		}
+	}
 	
 	if (KeyClick(KEY_INPUT_RETURN) == true) 
 	{
@@ -652,6 +712,15 @@ void PlayProc()
 //描画
 void PlayDraw() 
 {
+	//弾を出す
+	for (int i = 0; i < SHOT_MAX; i++)
+	{
+		if (shotUse[i].imageCom.isDraw)
+		{
+			DrawShot(&shotUse[i]);
+		}
+	}
+
 	if (GAME_DEBUG)
 	{
 		const char* string = "Play";
