@@ -11,7 +11,7 @@
 //FPS構造体
 struct FPS
 {
-	bool IsInitFlag = false;	//最初の測定開始フラグ
+	BOOL IsInitFlag = FALSE;	//最初の測定開始フラグ
 	LONGLONG StartTime = 0;		//開始開始時刻
 	LONGLONG NowTime = 0;		//現在の時刻
 	LONGLONG OldTime = 0;		//以前の時刻
@@ -28,6 +28,6 @@ struct FPS
 extern FPS fps;	//FPSの管理
 
 //プロトタイプ宣言
-void FpsUpdate(void);	// Fps値を測定し、値を更新する
-void FpsDraw(int draw_x, int draw_y, bool isBlackColor);	//デバック用の平均FPS値を描画する
-void FpsWait();			// FPSで処理を待つ
+VOID FpsUpdate(VOID);	// Fps値を測定し、値を更新する
+VOID FpsDraw(int draw_x, int draw_y, BOOL isBlackColor);	//デバック用の平均FPS値を描画する
+VOID FpsWait();			// FPSで処理を待つ

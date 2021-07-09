@@ -14,16 +14,16 @@ float divDeltaTime = 1000000.0f;	//deltaTimeを割る数(1000000.0f)
 /// Fps値を測定し、値を更新する
 /// </summary>
 /// <param name=""></param>
-void FpsUpdate(void) 
+VOID FpsUpdate(VOID) 
 {
 	//一番最初の処理
-	if (fps.IsInitFlag == false) 
+	if (fps.IsInitFlag == FALSE) 
 	{
 		//測定開始時刻をμ秒単位で取得
 		fps.StartTime = GetNowHiPerformanceCount();	//Windowが起動してから経過した時間(マイクロ秒)
 
 		//最初の処理終了
-		fps.IsInitFlag = true;
+		fps.IsInitFlag = TRUE;
 	}
 
 	//現在の時刻をμ秒単位で取得
@@ -63,7 +63,7 @@ void FpsUpdate(void)
 /// <param name="draw_x">描画するx位置</param>
 /// <param name="draw_y">描画するy位置</param>
 /// <param name="isBlackColor">描画色を黒にするか</param>
-void FpsDraw(int draw_x,int draw_y,bool isBlackColor) 
+VOID FpsDraw(int draw_x,int draw_y,BOOL isBlackColor) 
 {
 	//デバックモードなら描画する
 	if (GAME_DEBUG) 
@@ -88,7 +88,7 @@ void FpsDraw(int draw_x,int draw_y,bool isBlackColor)
 /// <summary>
 /// FPSで処理を待つ
 /// </summary>
-void FpsWait() 
+VOID FpsWait() 
 {
 	//現在の時刻-最初の時刻で、現在かかっている時刻を取得する
 	LONGLONG resultTime = fps.NowTime - fps.StartTime;
@@ -108,7 +108,7 @@ void FpsWait()
 	}
 
 	//垂直同期をOFFにしているか
-	if (GetWaitVSyncFlag() == false) 
+	if (GetWaitVSyncFlag() == FALSE) 
 	{
 		//FPSが最大値ではないとき
 		if (fps.Value < GAME_FPS_MAX) 

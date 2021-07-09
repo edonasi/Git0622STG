@@ -20,7 +20,7 @@
 //ウィンドウバーの種類(0 : 縦横の長さを変更不可)(1 : バーがない)
 #define GAME_WINDOW_BAR 0
 //デバックモード
-#define GAME_DEBUG true
+#define GAME_DEBUG TRUE
 
 //列挙型
 //ゲームのシーン

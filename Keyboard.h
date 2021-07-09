@@ -22,15 +22,15 @@ extern KEYBOARD keyboard;
 
 //----- プロトタイプ宣言 ------
 //すべてのキーの入力状態を取得する
-void AllKeyUpdate(void);
+VOID AllKeyUpdate(VOID);
 //特定のキーを押しているか
-bool KeyDown(int keyInput);
+BOOL KeyDown(int keyInput);
 //特定のキーを押した瞬間
-bool Key1Down(int keyInput);
+BOOL Key1Down(int keyInput);
 //特定のキーを上げているか
-bool KeyUp(int keyInput);
-bool KeyUpping(int keyInput);
+BOOL KeyUp(int keyInput);
+BOOL KeyUpping(int keyInput);
 //特定のキーをクリックしたか
-bool KeyClick(int keyInput);
+BOOL KeyClick(int keyInput);
 //特定のキーを指定のミリ秒分押し続けているか
-bool KeyDownKeep(int keyInput, int millSec);
+BOOL KeyDownKeep(int keyInput, int millSec);

@@ -10,7 +10,7 @@ KEYBOARD keyboard;
 /// <summary>
 /// キー入力状態を更新する
 /// </summary>
-void AllKeyUpdate(void) 
+VOID AllKeyUpdate(VOID) 
 {
 	//直前のキー入力を取っておく
 	for (int i = 0; i < KEY_KIND_MAX; i++) 
@@ -44,18 +44,18 @@ void AllKeyUpdate(void)
 /// キーを押しているかキーコードで判断する
 /// </summary>
 /// <param name="keyInput">キーコード</param>
-/// <returns>押しているならtrue</returns>
-bool KeyDown(int keyInput)
+/// <returns>押しているならTRUE</returns>
+BOOL KeyDown(int keyInput)
 {
 	if (keyboard.allKeyState[keyInput] != 0) 
 	{
 		//押した
-		return true;
+		return TRUE;
 	}
 	else 
 	{
 		//押してない
-		return false;
+		return FALSE;
 	}
 }
 
@@ -63,18 +63,18 @@ bool KeyDown(int keyInput)
 /// キーを押した瞬間かキーコードで判断する
 /// </summary>
 /// <param name="keyInput">キーコード</param>
-/// <returns>押しているならtrue</returns>
-bool Key1Down(int keyInput)
+/// <returns>押しているならTRUE</returns>
+BOOL Key1Down(int keyInput)
 {
 	if (keyboard.allKeyState[keyInput] == 1)
 	{
 		//押した
-		return true;
+		return TRUE;
 	}
 	else
 	{
 		//押してない
-		return false;
+		return FALSE;
 	}
 }
 
@@ -82,8 +82,8 @@ bool Key1Down(int keyInput)
 /// キーを上げているかキーコードで判断する
 /// </summary>
 /// <param name="keyInput">キーコード</param>
-/// <returns>上げているならtrue</returns>
-bool KeyUp(int keyInput)
+/// <returns>上げているならTRUE</returns>
+BOOL KeyUp(int keyInput)
 {
 	//以前は押した
 	if (keyboard.oldKeyState[keyInput] != 0		
@@ -91,27 +91,27 @@ bool KeyUp(int keyInput)
 		&& keyboard.allKeyState[keyInput] == 0)	
 	{
 		//上げた
-		return true;
+		return TRUE;
 	}
 	else
 	{
 		//上げていない
-		return false;
+		return FALSE;
 	}
 }
 
-bool KeyUpping(int keyInput) 
+BOOL KeyUpping(int keyInput) 
 {
 	//以前は押した
 	if (keyboard.allKeyState[keyInput] ==0)
 	{
 		//上げた
-		return true;
+		return TRUE;
 	}
 	else
 	{
 		//上げていない
-		return false;
+		return FALSE;
 	}
 }
 
@@ -119,8 +119,8 @@ bool KeyUpping(int keyInput)
 /// キーをクリックしたか
 /// </summary>
 /// <param name="keyInput">キーコード</param>
-/// <returns>クリックしたらtruetrue</returns>
-bool KeyClick(int keyInput)
+/// <returns>クリックしたらTRUETRUE</returns>
+BOOL KeyClick(int keyInput)
 {
 	//以前は押した
 	if (keyboard.oldKeyState[keyInput] != 0		
@@ -128,12 +128,12 @@ bool KeyClick(int keyInput)
 		&& keyboard.allKeyState[keyInput] == 0)	
 	{
 		//クリックした
-		return true;
+		return TRUE;
 	}
 	else
 	{
 		//クリックしてない
-		return false;
+		return FALSE;
 	}
 }
 
@@ -143,7 +143,7 @@ bool KeyClick(int keyInput)
 /// <param name="keyInput">キーコード</param>
 /// <param name="milliTime">キーコードを押し続けているミリ秒</param>
 /// <returns></returns>
-bool KeyDownKeep(int keyInput, int milliTime)
+BOOL KeyDownKeep(int keyInput, int milliTime)
 {
 	//1秒 = 1000ミリ秒
 	float milliSec = 1000.0f;
@@ -155,11 +155,11 @@ bool KeyDownKeep(int keyInput, int milliTime)
 	if (keyboard.allKeyState[keyInput] > updateTime)
 	{
 		//押し続けている
-		return true;
+		return TRUE;
 	}
 	else 
 	{
 		//押し続けていない
-		return false;
+		return FALSE;
 	}
 }
