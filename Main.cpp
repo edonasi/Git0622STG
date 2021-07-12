@@ -141,6 +141,25 @@ int shotIntervalCntMax = 10;
 //ƒvƒŒƒCƒ„[
 CHARACTER player;
 
+//“G
+const int ENEMY_KIND = 7;
+const int ENEMY_MAX = 10;
+CHARACTER enemyMoto[ENEMY_KIND];
+CHARACTER enemyUse[ENEMY_MAX];
+char enemyPath[ENEMY_KIND][255] = {
+	{".\\Images\\teki_yellow.png"},
+	{".\\Images\\teki_red.png"},
+	{".\\Images\\teki_purple.png"},
+	{".\\Images\\teki_mizu.png"},
+	{".\\Images\\teki_green.png"},
+	{".\\Images\\teki_gray.png"},
+	{".\\Images\\teki_blue.png"}
+};
+
+//”wŒi‰æ‘œ
+const int BACK_IMG_MAX = 2;
+IMAGE backImg[BACK_IMG_MAX];
+
 //”š”­‰æ‘œ‚Ìƒnƒ“ƒhƒ‹
 const int EXPROSION_X_MAX = 8;
 const int EXPROSION_Y_MAX = 2;
@@ -328,6 +347,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		DeleteGraph(shotMoto.handle[i]);
 	}
 
+	DeleteGraph(player.img.handle);
+
+	DeleteGraph(backImg[0].handle);
+	DeleteGraph(backImg[1].handle);
+
 	// ‚c‚wƒ‰ƒCƒuƒ‰ƒŠg—p‚ÌI—¹ˆ—€”õ(return 0‚Åƒ\ƒtƒg‚ªI—¹‚·‚é)
 	DxLib_End();				
 
@@ -393,6 +417,46 @@ BOOL GameLoad()
 	CollUpdate(&player,20,10,-20,-10);
 	player.img.isDraw = TRUE;
 	player.speed = 1;
+
+
+	////“G‰æ‘œ‚ğ“Ç‚İ‚İ
+	//for (int i = 0; i < ENEMY_KIND; i++)
+	//{
+	//	if (ImageLoad(&enemyMoto[i].img, enemyPath[i])
+	//		== FALSE)
+	//	{
+	//		return FALSE;
+	//	}
+	//	enemyMoto[i].img.x = GAME_WIDTH / 2 - enemyMoto[i].img.width / 2;
+	//	enemyMoto[i].img.y = -enemyMoto[i].img.height;
+	//	CollUpdate(&enemyMoto[i]);
+	//	enemyMoto[i].img.isDraw = FALSE;
+	//	enemyMoto[i].speed = 1;
+	//}
+
+	//”wŒi‰æ‘œ‚ğ“Ç‚İ‚İ
+	if (ImageLoad(&backImg[0], ".\\Images\\hoshi_rev.jpg")
+		== FALSE)
+	{
+		return FALSE;
+	}
+
+	if (ImageLoad(&backImg[1], ".\\Images\\hoshi_rev2.jpg")
+		== FALSE)
+	{
+		return FALSE;
+	}
+
+	//”wŒi‰æ‘œ‚Ì‰Šú‰»
+	for (int i = 0; i < BACK_IMG_MAX; i++)
+	{
+		backImg[i].x = 0;
+		backImg[i].isDraw = TRUE;
+		backImg[i].speed = 1;
+	}
+	backImg[0].y = -backImg[0].height;
+	backImg[1].y = 0;
+
 
 	//”š”­‰æ‘œ‚Ì“Ç‚İ‚İ
 	const char* exprosionPath = ".\\Images\\Image\\baku1.png";
@@ -548,7 +612,15 @@ BOOL AudioLoad(AUDIO* audio,const char* path, int playType, int volume)
 /// </summary>
 VOID GameInit() 
 {
-	
+	//”wŒi‰æ‘œ‚Ì‰Šú‰»
+	for (int i = 0; i < BACK_IMG_MAX; i++)
+	{
+		backImg[i].x = 0;
+		backImg[i].isDraw = TRUE;
+		backImg[i].speed = 1;
+	}
+	backImg[0].y = -backImg[0].height;
+	backImg[1].y = 0;
 }
 
 /// <summary>
@@ -720,6 +792,18 @@ VOID PlayProc()
 
 	if (KeyDown(KEY_INPUT_SPACE)&& shotIntervalCnt == 0)
 	{
+		//’e‚ğ”­Ë‚·‚é
+		for (int i = 0; i < SHOT_MAX; i++)
+		{
+			if (shotUse[i].imageCom.isDraw == FALSE) 
+			{
+				//’e‚ğ”­Ë
+				Shot(&shotUse[i], 270.0f);
+
+				break;
+			}
+		}
+
 		//--O•ûŒü‚É”­Ë--«
 		////’e‚ğ”­Ë‚·‚é
 		//for (int i = 0; i < SHOT_MAX; i++)
@@ -758,16 +842,17 @@ VOID PlayProc()
 		//}
 		//--O•ûŒü‚É”­Ë--ª
 
-		//•úËó‚É”­Ë
-		for (int deg = 0; deg < 180; deg += 10) {
-			for (int i = 0; i<SHOT_MAX; i++) {
-				if (shotUse[i].imageCom.isDraw == FALSE) {
-					Shot(&shotUse[i], deg);
 
-					break;
-				}
-			}
-		}
+		////•úËó‚É”­Ë
+		//for (int deg = 0; deg < 180; deg += 10) {
+		//	for (int i = 0; i<SHOT_MAX; i++) {
+		//		if (shotUse[i].imageCom.isDraw == FALSE) {
+		//			Shot(&shotUse[i], deg);
+
+		//			break;
+		//		}
+		//	}
+		//}
 	}
 
 	//’e‚Ì”­Ë‘Ò‚¿
@@ -844,6 +929,21 @@ VOID Shot(SHOT *shot,float deg)
 //•`‰æ
 VOID PlayDraw() 
 {
+	//”wŒi‚Ì•`‰æ
+	for (int i = 0; i < BACK_IMG_MAX; i++) 
+	{
+		//”wŒi‚Ì•`‰æ
+		DrawGraph(backImg[i].x, backImg[i].y, backImg[i].handle, TRUE);
+
+		//”wŒi‰æ‘œ‚ª‰æ–ÊŠO‚Éo‚½‚Æ‚«ã‚ÉˆÚ“®
+		if (backImg[i].y > GAME_HEIGHT)
+		{
+			backImg[i].y = -backImg[i].height;
+		}
+
+		backImg[i].y += backImg[i].speed;
+	}
+
 	//ƒvƒŒƒCƒ„[‚Ì•`‰æ
 	if (player.img.isDraw) 
 	{
@@ -871,10 +971,13 @@ VOID PlayDraw()
 		//“–‚½‚è”»’è‚Ì•`‰æ
 		if (GAME_DEBUG)
 		{
-			DrawBox(
-				shotUse[i].coll.left, shotUse[i].coll.top, shotUse[i].coll.right, shotUse[i].coll.bottom,
-				GetColor(255, 0, 0), FALSE
-			);
+			if (shotUse[i].imageCom.isDraw)
+			{
+				DrawBox(
+					shotUse[i].coll.left, shotUse[i].coll.top, shotUse[i].coll.right, shotUse[i].coll.bottom,
+					GetColor(255, 0, 0), FALSE
+				);
+			}
 		}
 	}
 
