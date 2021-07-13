@@ -155,10 +155,16 @@ char enemyPath[ENEMY_KIND][255] = {
 	{".\\Images\\teki_gray.png"},
 	{".\\Images\\teki_blue.png"}
 };
+//敵が出てくるインターバル
+int enemyInterval = 0;
+int enemyIntervalMax = 128;
 
 //背景画像
 const int BACK_IMG_MAX = 2;
 IMAGE backImg[BACK_IMG_MAX];
+
+//スコア
+int score = 0;
 
 //爆発画像のハンドル
 const int EXPROSION_X_MAX = 8;
@@ -217,6 +223,7 @@ VOID CollUpdate(SHOT* shot);
 VOID CollUpdate(CHARACTER* chara, int addLeft, int addTop, int addRight, int addBottom);
 //当たり判定(Enter)
 BOOL CollStay(CHARACTER chara1, CHARACTER chara2);
+BOOL CollStay(RECT rect1, RECT rect2);
 
 // プログラムは WinMain から始まります
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -346,12 +353,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		DeleteGraph(shotMoto.handle[i]);
 	}
-
 	DeleteGraph(player.img.handle);
-
 	DeleteGraph(backImg[0].handle);
 	DeleteGraph(backImg[1].handle);
-
+	for (int i = 0; i < ENEMY_KIND; i++)
+	{
+		DeleteGraph(enemyMoto[i].img.handle);
+	}
+	
 	// ＤＸライブラリ使用の終了処理準備(return 0でソフトが終了する)
 	DxLib_End();				
 
@@ -416,23 +425,23 @@ BOOL GameLoad()
 	player.img.y = GAME_HEIGHT / 2 - player.img.height/2;
 	CollUpdate(&player,20,10,-20,-10);
 	player.img.isDraw = TRUE;
-	player.speed = 1;
+	player.speed = 5;
 
 
-	////敵画像を読み込み
-	//for (int i = 0; i < ENEMY_KIND; i++)
-	//{
-	//	if (ImageLoad(&enemyMoto[i].img, enemyPath[i])
-	//		== FALSE)
-	//	{
-	//		return FALSE;
-	//	}
-	//	enemyMoto[i].img.x = GAME_WIDTH / 2 - enemyMoto[i].img.width / 2;
-	//	enemyMoto[i].img.y = -enemyMoto[i].img.height;
-	//	CollUpdate(&enemyMoto[i]);
-	//	enemyMoto[i].img.isDraw = FALSE;
-	//	enemyMoto[i].speed = 1;
-	//}
+	//敵画像を読み込み
+	for (int i = 0; i < ENEMY_KIND; i++)
+	{
+		if (ImageLoad(&enemyMoto[i].img, enemyPath[i])
+			== FALSE)
+		{
+			return FALSE;
+		}
+		enemyMoto[i].img.x = GAME_WIDTH / 2 - enemyMoto[i].img.width / 2;
+		enemyMoto[i].img.y = -enemyMoto[i].img.height;
+		CollUpdate(&enemyMoto[i]);
+		enemyMoto[i].img.isDraw = FALSE;
+		enemyMoto[i].speed = 1;
+	}
 
 	//背景画像を読み込み
 	if (ImageLoad(&backImg[0], ".\\Images\\hoshi_rev.jpg")
@@ -456,6 +465,9 @@ BOOL GameLoad()
 	}
 	backImg[0].y = -backImg[0].height;
 	backImg[1].y = 0;
+
+	//スコアの初期化
+	score = 0;
 
 
 	//爆発画像の読み込み
@@ -621,6 +633,9 @@ VOID GameInit()
 	}
 	backImg[0].y = -backImg[0].height;
 	backImg[1].y = 0;
+
+	//スコアの初期化
+	score = 0;
 }
 
 /// <summary>
@@ -763,7 +778,7 @@ VOID PlayProc()
 	//右
 	if (KeyDown(KEY_INPUT_RIGHT) == TRUE)
 	{
-		if (player.img.x + player.speed <= GAME_WIDTH)
+		if (player.img.x +player.img.width+ player.speed <= GAME_WIDTH)
 		{
 			player.img.x += player.speed;
 		}
@@ -781,7 +796,7 @@ VOID PlayProc()
 	//下
 	if (KeyDown(KEY_INPUT_DOWN) == TRUE)
 	{
-		if (player.img.y + player.speed <= GAME_HEIGHT)
+		if (player.img.y +player.img.height+ player.speed <= GAME_HEIGHT)
 		{
 			player.img.y += player.speed;
 		}
@@ -895,8 +910,77 @@ VOID PlayProc()
 		}
 	}
 	
+	//敵を生成する
+	if (enemyInterval < enemyIntervalMax)
+	{
+		enemyInterval++;
+	}
+	else 
+	{
+		enemyInterval = 0;
+
+		//敵を生成する
+		for (int i = 0; i < ENEMY_MAX; i++)
+		{
+			if (enemyUse[i].img.isDraw == FALSE)
+			{
+				if (score < 1000)
+				{
+					enemyUse[i] = enemyMoto[0];
+				}
+				else if (score<2000) 
+				{
+					enemyUse[i] = enemyMoto[1];
+				}
+				else 
+				{
+					enemyUse[i] = enemyMoto[GetRand(ENEMY_KIND - 1)];
+				}
+
+				int div = 10;
+				enemyUse[i].img.x = GetRand(div-1) * GAME_WIDTH / 4;
+				enemyUse[i].img.y = -enemyUse[i].img.height;
+				enemyUse[i].img.isDraw = TRUE;	//描画する
+				break;
+			}
+		}
+	}
 	
 	
+	//敵の処理
+	for (int i = 0; i < ENEMY_MAX; i++)
+	{
+		if (enemyUse[i].img.isDraw == TRUE) 
+		{
+			//移動させる
+			enemyUse[i].img.y += enemyUse[i].img.speed;
+
+			//画面外に出たら描画しない
+			if (enemyUse[i].img.y > GAME_HEIGHT)
+			{
+				enemyUse[i].img.isDraw = FALSE;
+				return;
+			}
+
+			//当たり判定の更新
+			CollUpdate(&enemyUse[i]);
+
+			for (int si = 0; si < SHOT_MAX; si++)
+			{
+				if (shotUse[si].imageCom.isDraw == TRUE) 
+				{
+					//当たり判定
+					if (CollStay(enemyUse[i].coll, shotUse[si].coll) == TRUE)
+					{
+						enemyUse[i].img.isDraw = FALSE;
+						shotUse[si].imageCom.isDraw = FALSE;
+						score += 100;
+					}
+				}
+			}
+			
+		}
+	}
 	return;
 }
 
@@ -960,6 +1044,27 @@ VOID PlayDraw()
 		}
 	}
 
+	//敵の描画
+	for (int i = 0; i < ENEMY_MAX; i++)
+	{
+		if (enemyUse[i].img.isDraw)
+		{
+			DrawGraph(enemyUse[i].img.x, enemyUse[i].img.y, enemyUse[i].img.handle, TRUE);
+		}
+
+		//当たり判定の描画
+		if (GAME_DEBUG)
+		{
+			if (enemyUse[i].img.isDraw)
+			{
+				DrawBox(
+					enemyUse[i].coll.left, enemyUse[i].coll.top, enemyUse[i].coll.right, enemyUse[i].coll.bottom,
+					GetColor(255, 0, 0), FALSE
+				);
+			}
+		}
+	}
+
 	//弾を出す
 	for (int i = 0; i < SHOT_MAX; i++)
 	{
@@ -985,6 +1090,12 @@ VOID PlayDraw()
 	{
 		const char* string = "Play";
 		DrawString(0, 50, string, GetColor(0, 0, 0));
+
+		//スコアの描画
+		int old = GetFontSize();	//以前のフォントのサイズを取得
+		SetFontSize(40);
+		DrawFormatString(0, 100, GetColor(255, 255, 255), "SCORE : %05d", score);
+		SetFontSize(old);
 	}
 
 
@@ -1198,6 +1309,26 @@ BOOL CollStay(CHARACTER chara1, CHARACTER chara2)
 		}
 	}
 	
+
+	return FALSE;
+}
+
+//当たり判定(Enter)
+BOOL CollStay(RECT rect1, RECT rect2)
+{
+
+	//当たり判定
+	if (
+		rect1.left<rect2.right
+		&& rect1.right>rect2.left
+		&& rect1.top<rect2.bottom
+		&& rect1.bottom>rect2.top
+		)
+	{
+		return TRUE;
+	}
+
+
 
 	return FALSE;
 }
