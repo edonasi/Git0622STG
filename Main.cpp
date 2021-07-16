@@ -1,6 +1,7 @@
 #include "Game.h"		//ゲーム全体のヘッダファイル
 #include "Fps.h"		//FPS処理のヘッダファイル
 #include "Keyboard.h"	//キーボードの処理のヘッダファイル
+#include "Mouse.h"
 #define _CRT_SECURE_NO_WARNINGS
 #include <math.h>
 
@@ -84,6 +85,7 @@ struct SHOT
 	IMAGE_COM imageCom;		//画像の共通項目
 
 	RECT coll;
+	CIRCLE circle;
 };
 
 //シーンを管理する変数
@@ -221,6 +223,7 @@ VOID ChangeDraw();
 VOID CollUpdate(CHARACTER* chara);
 VOID CollUpdate(SHOT* shot);
 VOID CollUpdate(CHARACTER* chara, int addLeft, int addTop, int addRight, int addBottom);
+VOID CollCircleUpdate(SHOT* shot);
 //当たり判定(Enter)
 BOOL CollStay(CHARACTER chara1, CHARACTER chara2);
 BOOL CollStay(RECT rect1, RECT rect2);
@@ -281,6 +284,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		//FPS値の更新※AllKeyUpdateなどの一連の処理が終了後に書く
 		FpsUpdate();
+
+		//マウスの入力情報を更新する
+		MouseUpdate();
 		
 		//メッセージを受け取り続ける、×などでウィンドウが閉じたとき
 		if (ProcessMessage() != 0) 
@@ -404,7 +410,8 @@ BOOL GameLoad()
 	shotMoto.animeCntMax = 30;
 
 	//当たり判定の更新
-	CollUpdate(&shotMoto);
+	//CollUpdate(&shotMoto);
+	CollCircleUpdate(&shotMoto);
 
 	//画像を表示しない
 	shotMoto.imageCom.isDraw = FALSE;
@@ -765,47 +772,17 @@ VOID PlayProc()
 		return;
 	}
 
-	//プレイヤーを操作する
-	//左
-	if (KeyDown(KEY_INPUT_LEFT)==TRUE) 
-	{
-		if (player.img.x - player.speed >= 0) 
-		{
-			player.img.x -= player.speed;
-		}
-	}
-
-	//右
-	if (KeyDown(KEY_INPUT_RIGHT) == TRUE)
-	{
-		if (player.img.x +player.img.width+ player.speed <= GAME_WIDTH)
-		{
-			player.img.x += player.speed;
-		}
-	}
-
-	//上
-	if (KeyDown(KEY_INPUT_UP) == TRUE)
-	{
-		if (player.img.y - player.speed >= 0)
-		{
-			player.img.y -= player.speed;
-		}
-	}
-
-	//下
-	if (KeyDown(KEY_INPUT_DOWN) == TRUE)
-	{
-		if (player.img.y +player.img.height+ player.speed <= GAME_HEIGHT)
-		{
-			player.img.y += player.speed;
-		}
-	}
+	//マウスを非表示にする
+	SetMouseDispFlag(FALSE);
+	//マウスの位置にプレイヤーを置く
+	player.img.x = mouse.point.x - player.img.width / 2;
+	player.img.y = mouse.point.y - player.img.height / 2;
 
 	//プレイヤーの当たり判定の更新
 	CollUpdate(&player, 20, 10, -20, -10);
-
-	if (KeyDown(KEY_INPUT_SPACE)&& shotIntervalCnt == 0)
+	
+	//右クリックで球を発射する
+	if (MouseDown(MOUSE_INPUT_LEFT) == TRUE && shotIntervalCnt == 0)
 	{
 		//弾を発射する
 		for (int i = 0; i < SHOT_MAX; i++)
@@ -897,7 +874,8 @@ VOID PlayProc()
 			shotUse[i].radius += shotUse[i].speed;
 
 			//弾の当たり判定を更新
-			CollUpdate(&shotUse[i]);
+			//CollUpdate(&shotUse[i]);
+			CollCircleUpdate(&shotUse[i]);
 
 			//画面外に出たら描画しない
 			if (shotUse[i].imageCom.y + shotUse[i].imageCom.height<0
@@ -970,7 +948,7 @@ VOID PlayProc()
 				if (shotUse[si].imageCom.isDraw == TRUE) 
 				{
 					//当たり判定
-					if (CollStay(enemyUse[i].coll, shotUse[si].coll) == TRUE)
+					if (CheckCollRectToCircle(enemyUse[i].coll, shotUse[si].circle) == TRUE)
 					{
 						enemyUse[i].img.isDraw = FALSE;
 						shotUse[si].imageCom.isDraw = FALSE;
@@ -1005,7 +983,8 @@ VOID Shot(SHOT *shot,float deg)
 	shot->radius = 0.0f;
 
 	//弾の当たり判定を更新
-	CollUpdate(shot);
+	//CollUpdate(shot);
+	CollCircleUpdate(shot);
 
 	shotIntervalCnt++;
 }
@@ -1078,10 +1057,11 @@ VOID PlayDraw()
 		{
 			if (shotUse[i].imageCom.isDraw)
 			{
-				DrawBox(
+				/*DrawBox(
 					shotUse[i].coll.left, shotUse[i].coll.top, shotUse[i].coll.right, shotUse[i].coll.bottom,
 					GetColor(255, 0, 0), FALSE
-				);
+				);*/
+				DrawCircle(shotUse[i].circle);
 			}
 		}
 	}
@@ -1096,6 +1076,9 @@ VOID PlayDraw()
 		SetFontSize(40);
 		DrawFormatString(0, 100, GetColor(255, 255, 255), "SCORE : %05d", score);
 		SetFontSize(old);
+
+		//マウスの位置を描画する
+		MouseDraw();
 	}
 
 
@@ -1269,6 +1252,26 @@ VOID CollUpdate(SHOT* shot)
 	shot->coll.top = shot->imageCom.y;
 	shot->coll.right = shot->imageCom.x + shot->imageCom.width;
 	shot->coll.bottom = shot->imageCom.y + shot->imageCom.height;
+
+	return;
+}
+
+/// <summary>
+/// 構造体SHOTの円領域当たり判定を更新
+/// </summary>
+/// <param name="shot">SHOT構造体</param>
+VOID CollCircleUpdate(SHOT* shot) 
+{
+	//矩形の半分の長さを求める
+	int wh = shot->imageCom.width / 2;
+	int hh = shot->imageCom.height / 2;
+
+	//中心点を求める
+	shot->circle.center.x = shot->imageCom.x + wh;
+	shot->circle.center.y = shot->imageCom.y + hh;
+
+	//半径を求める
+	shot->circle.radius = sqrtf(wh * wh + hh * hh);
 
 	return;
 }
