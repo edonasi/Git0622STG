@@ -177,6 +177,11 @@ int exprosionIndex = 0;
 int exprosionCnt = 0;
 int exprosionCntMax = 4;
 
+//BGM
+AUDIO titleBgm;
+AUDIO playBgm;
+AUDIO endBgm;
+
 //ƒQ[ƒ€‘S‘Ì‚Ì‰Šú‰»
 BOOL GameLoad();
 //‰æ‘œ‚Ì“Ç‚İ‚İ
@@ -485,6 +490,9 @@ BOOL GameLoad()
 	{
 		return FALSE;
 	}
+
+	//Bgm‚Ì“Ç‚İ‚İ
+	//if (AudioLoad(&titleBgm,)) {}
 
 	return TRUE;
 }
